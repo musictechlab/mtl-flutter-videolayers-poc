@@ -1,0 +1,19 @@
+1
+00:00:01,000 --> 00:00:03,000
+Hello, welcome to MTL TEST
+
+2
+00:00:04,000 --> 00:00:06,000
+This is the dialogue track
+
+3
+00:00:07,000 --> 00:00:09,000
+Added here as subtitles
+
+4
+00:00:10,000 --> 00:00:12,000
+You can switch audio and video
+
+5
+00:00:13,000 --> 00:00:15,000
+And images are stored as attachments
