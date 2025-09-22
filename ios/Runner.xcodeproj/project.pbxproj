@@ -15,6 +15,9 @@
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
+		C8F7165F2E7828FC00157E88 /* AirPlayRoutePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8F7165E2E781EE400157E88 /* AirPlayRoutePicker.swift */; };
+		C8F716612E782FFD00157E88 /* MixedPlayerCompositor.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8F716602E782FE900157E88 /* MixedPlayerCompositor.swift */; };
+		C8F716632E78301900157E88 /* MixedPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8F716622E78301600157E88 /* MixedPlayerView.swift */; };
 		F65C0D67936E12EEE9CFDEA6 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5F6ECE7F2D79095FB2192802 /* Pods_RunnerTests.framework */; };
 /* End PBXBuildFile section */
 
@@ -63,6 +66,9 @@
 		97C146FD1CF9000F007C117D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		C8F7165E2E781EE400157E88 /* AirPlayRoutePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirPlayRoutePicker.swift; sourceTree = "<group>"; };
+		C8F716602E782FE900157E88 /* MixedPlayerCompositor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixedPlayerCompositor.swift; sourceTree = "<group>"; };
+		C8F716622E78301600157E88 /* MixedPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixedPlayerView.swift; sourceTree = "<group>"; };
 		CE831F874B14AA460416EF47 /* Pods-RunnerTests.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.profile.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.profile.xcconfig"; sourceTree = "<group>"; };
 		D5575CAE2D3C8A2DB962A0B7 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -105,7 +111,6 @@
 				1FAD59181E1BADF895DE12AD /* Pods-RunnerTests.release.xcconfig */,
 				CE831F874B14AA460416EF47 /* Pods-RunnerTests.profile.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -144,6 +149,8 @@
 		97C146F01CF9000F007C117D /* Runner */ = {
 			isa = PBXGroup;
 			children = (
+				C8F716622E78301600157E88 /* MixedPlayerView.swift */,
+				C8F716602E782FE900157E88 /* MixedPlayerCompositor.swift */,
 				97C146FA1CF9000F007C117D /* Main.storyboard */,
 				97C146FD1CF9000F007C117D /* Assets.xcassets */,
 				97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */,
@@ -152,6 +159,7 @@
 				1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */,
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
+				C8F7165E2E781EE400157E88 /* AirPlayRoutePicker.swift */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -377,7 +385,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C8F7165F2E7828FC00157E88 /* AirPlayRoutePicker.swift in Sources */,
+				C8F716612E782FFD00157E88 /* MixedPlayerCompositor.swift in Sources */,
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
+				C8F716632E78301900157E88 /* MixedPlayerView.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

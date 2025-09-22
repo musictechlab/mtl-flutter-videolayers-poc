@@ -5,6 +5,9 @@ import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
+import 'airplay_route_picker.dart';
+// import 'mixed_player_view.dart'
+
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -301,15 +304,16 @@ class _LayersHomeState extends State<LayersHome> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Layered Playback (Flutter PoC)'),
-        actions: [
-          IconButton(
-            tooltip: _baseVideo.value.isPlaying ? 'Pause' : 'Play',
-            onPressed: _togglePlayPause,
-            icon: Icon(_baseVideo.value.isPlaying ? Icons.pause : Icons.play_arrow),
-          ),
-        ],
-      ),
+      title: const Text('Layered Playback (Flutter PoC)'),
+      actions: [
+        const AirPlayRoutePicker(size: 26),
+        IconButton(
+          tooltip: _baseVideo.value.isPlaying ? 'Pause' : 'Play',
+          onPressed: _togglePlayPause,
+          icon: Icon(_baseVideo.value.isPlaying ? Icons.pause : Icons.play_arrow),
+        ),
+      ],
+    ),
       body: !_ready
           ? const Center(child: CircularProgressIndicator())
           : Column(
