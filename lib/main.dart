@@ -8,9 +8,8 @@ import 'package:audio_session/audio_session.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:web_socket_channel/status.dart' as ws_status;
-
+import 'cast_session.dart';
+import 'host_link.dart';
 import 'airplay_route_picker.dart';
 
 // import 'mixed_player_view.dart'
@@ -30,132 +29,6 @@ class LayersApp extends StatelessWidget {
       home: const LayersHome(),
       debugShowCheckedModeBanner: false,
     );
-  }
-}
-
-// ---------- Host link (QR -> WS connect) ----------
-class HostLink {
-  WebSocketChannel? _ch;
-  String? host;
-  int? port;
-  String? token;
-  bool get isConnected => _ch != null;
-
-  Future<void> connectFromPairUri(String pairUri) async {
-    debugPrint('connectFromPairUri: $pairUri');
-    final uri = Uri.parse(pairUri);
-
-    String? host;
-    int? port;
-    String? token;
-
-    if ((uri.scheme == 'ambistream') && (uri.host == 'pair')) {
-      host = uri.queryParameters['host'];
-      port = int.tryParse(uri.queryParameters['port'] ?? '');
-      token = uri.queryParameters['token'];
-    } else if (uri.scheme == 'ws' || uri.scheme == 'wss') {
-      host = uri.host.isNotEmpty ? uri.host : null;
-      port = uri.hasPort ? uri.port : (uri.scheme == 'wss' ? 443 : 80);
-      token = uri.queryParameters['token'];
-    } else {
-      throw 'Invalid QR: unsupported scheme "${uri.scheme}"';
-    }
-
-    if (host == null || port == null || token == null) {
-      throw 'Invalid QR: missing host/port/token';
-    }
-
-    await close();
-
-    final wsUrl = Uri(
-      scheme: (uri.scheme == 'wss') ? 'wss' : 'ws',
-      host: host,
-      port: port,
-      path: '/',
-      queryParameters: {'token': token},
-    );
-
-    _ch = WebSocketChannel.connect(wsUrl);
-
-    _send({
-      'type': 'HELLO',
-      'token': token,
-      'device': {'type': 'ios', 'name': 'Mobile Remote'},
-    });
-
-    _ch!.stream.listen(
-      (msg) {
-        // handle host -> client messages as needed
-      },
-      onDone: () {
-        _ch = null;
-      },
-      onError: (_) {
-        _ch = null;
-      },
-    );
-  }
-
-  void sendPlay(int mediaMs, {double rate = 1.0}) {
-    if (!isConnected) return;
-    final anchorWallMs = DateTime.now().millisecondsSinceEpoch + 150;
-    _send({
-      'type': 'PLAY',
-      'rate': rate,
-      'mediaMs': mediaMs,
-      'anchorWallMs': anchorWallMs,
-    });
-  }
-
-  void sendPauseAt(int mediaMs) {
-    if (!isConnected) return;
-    final anchorWallMs = DateTime.now().millisecondsSinceEpoch;
-    _send({'type': 'PAUSE', 'mediaMs': mediaMs, 'anchorWallMs': anchorWallMs});
-  }
-
-  void sendSeek(int mediaMs) {
-    if (!isConnected) return;
-    final anchorWallMs = DateTime.now().millisecondsSinceEpoch + 120;
-    _send({'type': 'SEEK', 'mediaMs': mediaMs, 'anchorWallMs': anchorWallMs});
-  }
-
-  void sendOpacity(double value) {
-    if (!isConnected) return;
-    _send({'type': 'SET_OPACITY', 'value': value});
-  }
-
-  void sendLoad({
-    required String bgUrl,
-    required String fgUrl,
-    String? extraAudioUrl,
-    required double opacity,
-  }) {
-    if (!isConnected) return;
-    _send({
-      'type': 'LOAD',
-      'id': 'poc-1',
-      'bgUrl': bgUrl,
-      'fgUrl': fgUrl,
-      'extraAudioUrl': extraAudioUrl,
-      'opacity': opacity,
-    });
-  }
-
-  Future<void> close() async {
-    try {
-      // Always use 1000 (normal closure) with web_socket_channel
-      await _ch?.sink.close(1000);
-    } catch (_) {
-      // ignore
-    } finally {
-      _ch = null;
-    }
-  }
-
-  void _send(Map<String, dynamic> m) {
-    try {
-      _ch?.sink.add(jsonEncode(m));
-    } catch (_) {}
   }
 }
 
@@ -240,6 +113,8 @@ class _LayersHomeState extends State<LayersHome> {
   // --- controllers ---
   late final VideoPlayerController _baseVideo;
   late final VideoPlayerController _overlayVideo;
+  late final CastSession _cast; // add this
+
   final AudioPlayer _extraAudio = AudioPlayer();
 
   // --- layer visibility / state ---
@@ -274,6 +149,7 @@ class _LayersHomeState extends State<LayersHome> {
 
   // Panel expansion state (all closed by default)
   final _expanded = <String, bool>{
+    'cast': false,
     'base': false,
     'overlay': false,
     'image': false,
@@ -284,6 +160,7 @@ class _LayersHomeState extends State<LayersHome> {
   @override
   void initState() {
     super.initState();
+    _cast = CastSession(hostLink); // hostLink is your existing global/singleton
     _baseVideo = VideoPlayerController.networkUrl(Uri.parse(baseUrl));
     _overlayVideo = VideoPlayerController.networkUrl(Uri.parse(overlayUrl));
     _init();
@@ -440,6 +317,8 @@ class _LayersHomeState extends State<LayersHome> {
   void dispose() {
     _subTicker?.cancel();
     _resyncTimer?.cancel();
+    // Stop any ongoing cast session.
+    _cast.stop();
     _baseVideo.dispose();
     _overlayVideo.dispose();
     _extraAudio.dispose();
@@ -486,6 +365,32 @@ class _LayersHomeState extends State<LayersHome> {
       );
     }
     setState(() {});
+  }
+
+  // Start/stop WebRTC casting of the mixed output
+  Future<void> _toggleCast(bool on) async {
+    if (on) {
+      if (!hostLink.isConnected) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Connect to a Host first to cast')),
+        );
+        return;
+      }
+      try {
+        await _cast.start();
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Cast start failed: $e')));
+      }
+    } else {
+      try {
+        await _cast.stop();
+      } catch (_) {}
+    }
+    if (mounted) setState(() {});
   }
 
   // Unified seek for all layers
@@ -770,6 +675,30 @@ class _LayersHomeState extends State<LayersHome> {
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                     children: [
+                      // Casting panel (new)
+                      _layerPanel(
+                        context,
+                        keyStr: 'cast',
+                        icon: Icons.cast_rounded,
+                        title: 'Cast Mixed Output',
+                        enabled: _cast.isActive,
+                        onToggle: (v) => _toggleCast(v),
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 16, right: 16),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              hostLink.isConnected
+                                  ? (_cast.isActive
+                                        ? 'Casting to host…'
+                                        : 'Tap the switch to start casting the mixed video to the host.')
+                                  : 'Connect to a host first, then enable casting.',
+                              style: const TextStyle(color: Colors.white70),
+                            ),
+                          ),
+                        ),
+                      ),
+
                       _layerPanel(
                         context,
                         keyStr: 'base',
@@ -914,16 +843,16 @@ class _LayersHomeState extends State<LayersHome> {
     final isExpanded = _expanded[keyStr] ?? false;
 
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      margin: const EdgeInsets.symmetric(vertical: 1),
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
       child: Column(
         children: [
           InkWell(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(2)),
             onTap: () => setState(() => _expanded[keyStr] = !isExpanded),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
               child: Row(
                 children: [
                   Icon(icon),

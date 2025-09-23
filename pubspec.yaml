@@ -41,7 +41,8 @@ dependencies:
   rename: ^3.1.0
   mobile_scanner: ^5.1.1
   web_socket_channel: ^3.0.1
-  
+  flutter_webrtc: ^1.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
