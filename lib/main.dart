@@ -1,11 +1,18 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
+import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:web_socket_channel/status.dart' as ws_status;
+
 import 'airplay_route_picker.dart';
+
 // import 'mixed_player_view.dart'
 
 void main() {
@@ -23,6 +30,191 @@ class LayersApp extends StatelessWidget {
       home: const LayersHome(),
       debugShowCheckedModeBanner: false,
     );
+  }
+}
+
+// ---------- Host link (QR -> WS connect) ----------
+class HostLink {
+  WebSocketChannel? _ch;
+  String? host;
+  int? port;
+  String? token;
+  bool get isConnected => _ch != null;
+
+  Future<void> connectFromPairUri(String pairUri) async {
+    debugPrint('connectFromPairUri: $pairUri');
+    final uri = Uri.parse(pairUri);
+
+    String? host;
+    int? port;
+    String? token;
+
+    if ((uri.scheme == 'ambistream') && (uri.host == 'pair')) {
+      host = uri.queryParameters['host'];
+      port = int.tryParse(uri.queryParameters['port'] ?? '');
+      token = uri.queryParameters['token'];
+    } else if (uri.scheme == 'ws' || uri.scheme == 'wss') {
+      host = uri.host.isNotEmpty ? uri.host : null;
+      port = uri.hasPort ? uri.port : (uri.scheme == 'wss' ? 443 : 80);
+      token = uri.queryParameters['token'];
+    } else {
+      throw 'Invalid QR: unsupported scheme "${uri.scheme}"';
+    }
+
+    if (host == null || port == null || token == null) {
+      throw 'Invalid QR: missing host/port/token';
+    }
+
+    await close();
+
+    final wsUrl = Uri(
+      scheme: (uri.scheme == 'wss') ? 'wss' : 'ws',
+      host: host,
+      port: port,
+      path: '/',
+      queryParameters: {'token': token},
+    );
+
+    _ch = WebSocketChannel.connect(wsUrl);
+
+    _send({
+      'type': 'HELLO',
+      'token': token,
+      'device': {'type': 'ios', 'name': 'Mobile Remote'},
+    });
+
+    _ch!.stream.listen(
+      (msg) {
+        // handle host -> client messages as needed
+      },
+      onDone: () {
+        _ch = null;
+      },
+      onError: (_) {
+        _ch = null;
+      },
+    );
+  }
+
+  void sendPlay(int mediaMs, {double rate = 1.0}) {
+    if (!isConnected) return;
+    final anchorWallMs = DateTime.now().millisecondsSinceEpoch + 150;
+    _send({
+      'type': 'PLAY',
+      'rate': rate,
+      'mediaMs': mediaMs,
+      'anchorWallMs': anchorWallMs,
+    });
+  }
+
+  void sendPauseAt(int mediaMs) {
+    if (!isConnected) return;
+    final anchorWallMs = DateTime.now().millisecondsSinceEpoch;
+    _send({'type': 'PAUSE', 'mediaMs': mediaMs, 'anchorWallMs': anchorWallMs});
+  }
+
+  void sendSeek(int mediaMs) {
+    if (!isConnected) return;
+    final anchorWallMs = DateTime.now().millisecondsSinceEpoch + 120;
+    _send({'type': 'SEEK', 'mediaMs': mediaMs, 'anchorWallMs': anchorWallMs});
+  }
+
+  void sendOpacity(double value) {
+    if (!isConnected) return;
+    _send({'type': 'SET_OPACITY', 'value': value});
+  }
+
+  void sendLoad({
+    required String bgUrl,
+    required String fgUrl,
+    String? extraAudioUrl,
+    required double opacity,
+  }) {
+    if (!isConnected) return;
+    _send({
+      'type': 'LOAD',
+      'id': 'poc-1',
+      'bgUrl': bgUrl,
+      'fgUrl': fgUrl,
+      'extraAudioUrl': extraAudioUrl,
+      'opacity': opacity,
+    });
+  }
+
+  Future<void> close() async {
+    try {
+      // Always use 1000 (normal closure) with web_socket_channel
+      await _ch?.sink.close(1000);
+    } catch (_) {
+      // ignore
+    } finally {
+      _ch = null;
+    }
+  }
+
+  void _send(Map<String, dynamic> m) {
+    try {
+      _ch?.sink.add(jsonEncode(m));
+    } catch (_) {}
+  }
+}
+
+final hostLink = HostLink();
+
+// ---------- QR scanner screen ----------
+class ScanHostScreen extends StatefulWidget {
+  const ScanHostScreen({super.key});
+  @override
+  State<ScanHostScreen> createState() => _ScanHostScreenState();
+}
+
+class _ScanHostScreenState extends State<ScanHostScreen> {
+  bool _handled = false;
+  final _controller = MobileScannerController(facing: CameraFacing.back);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Scan Host QR')),
+      body: Stack(
+        children: [
+          MobileScanner(
+            controller: _controller,
+            onDetect: (capture) async {
+              if (_handled) return;
+              final codes = capture.barcodes;
+              final raw = codes.isNotEmpty ? codes.first.rawValue : null;
+              if (raw == null) return;
+              _handled = true;
+              Navigator.pop(context, raw);
+            },
+          ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'Point at the host’s QR code',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 }
 
@@ -180,6 +372,16 @@ class _LayersHomeState extends State<LayersHome> {
 
       if (!mounted) return;
       setState(() => _ready = true);
+
+      // If we are connected to a Host, send LOAD so the host mirrors the same assets
+      if (hostLink.isConnected) {
+        hostLink.sendLoad(
+          bgUrl: baseUrl,
+          fgUrl: overlayUrl,
+          extraAudioUrl: _useExtraAudio ? extraAudioUrl : null,
+          opacity: _overlayOpacity,
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = 'Init error: $e');
@@ -247,9 +449,11 @@ class _LayersHomeState extends State<LayersHome> {
   Future<void> _togglePlayPause() async {
     final isPlaying = _baseVideo.value.isPlaying;
     if (isPlaying) {
+      final pauseAt = _baseVideo.value.position.inMilliseconds;
       await _baseVideo.pause();
       await _overlayVideo.pause();
       if (_useExtraAudio) await _extraAudio.pause();
+      if (hostLink.isConnected) hostLink.sendPauseAt(pauseAt);
     } else {
       final pos = _baseVideo.value.position;
       await _overlayVideo.seekTo(pos);
@@ -257,6 +461,9 @@ class _LayersHomeState extends State<LayersHome> {
       await _baseVideo.play();
       await _overlayVideo.play();
       if (_useExtraAudio) await _extraAudio.play();
+      if (hostLink.isConnected) {
+        hostLink.sendPlay(pos.inMilliseconds, rate: 1.0);
+      }
     }
     setState(() {});
   }
@@ -268,6 +475,15 @@ class _LayersHomeState extends State<LayersHome> {
       await _extraAudio.play();
     } else {
       await _extraAudio.pause();
+    }
+    // Re-send LOAD so host knows extraAudio changed
+    if (hostLink.isConnected) {
+      hostLink.sendLoad(
+        bgUrl: baseUrl,
+        fgUrl: overlayUrl,
+        extraAudioUrl: _useExtraAudio ? extraAudioUrl : null,
+        opacity: _overlayOpacity,
+      );
     }
     setState(() {});
   }
@@ -283,10 +499,17 @@ class _LayersHomeState extends State<LayersHome> {
     await _overlayVideo.seekTo(to);
     if (_useExtraAudio) await _extraAudio.seek(to);
 
+    if (hostLink.isConnected) {
+      hostLink.sendSeek(to.inMilliseconds);
+    }
+
     if (wasPlaying) {
       await _baseVideo.play();
       await _overlayVideo.play();
       if (_useExtraAudio) await _extraAudio.play();
+      if (hostLink.isConnected) {
+        hostLink.sendPlay(to.inMilliseconds, rate: 1.0);
+      }
     }
   }
 
@@ -295,6 +518,45 @@ class _LayersHomeState extends State<LayersHome> {
     final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
     return h > 0 ? '$h:$m:$s' : '$m:$s';
+  }
+
+  Future<void> _scanAndConnectHost() async {
+    final scanned = await Navigator.of(
+      context,
+    ).push<String>(MaterialPageRoute(builder: (_) => const ScanHostScreen()));
+    if (scanned == null) return;
+
+    try {
+      await hostLink.connectFromPairUri(scanned);
+
+      // After connecting, tell host what to load so we mirror content.
+      if (_ready) {
+        hostLink.sendLoad(
+          bgUrl: baseUrl,
+          fgUrl: overlayUrl,
+          extraAudioUrl: _useExtraAudio ? extraAudioUrl : null,
+          opacity: _overlayOpacity,
+        );
+        // If already playing, nudge host to same point
+        final posMs = _baseVideo.value.position.inMilliseconds;
+        if (_baseVideo.value.isPlaying) {
+          hostLink.sendPlay(posMs, rate: 1.0);
+        } else {
+          hostLink.sendPauseAt(posMs);
+        }
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Connected to Ambistream Host')),
+      );
+      setState(() {});
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Connect failed: $e')));
+    }
   }
 
   @override
@@ -310,6 +572,17 @@ class _LayersHomeState extends State<LayersHome> {
       appBar: AppBar(
         title: const Text('Layered Playback'),
         actions: [
+          // Scan Host button
+          IconButton(
+            tooltip: hostLink.isConnected
+                ? 'Connected'
+                : 'Scan host to connect',
+            onPressed: _scanAndConnectHost,
+            icon: Icon(
+              hostLink.isConnected ? Icons.link : Icons.qr_code_scanner,
+            ),
+          ),
+          const SizedBox(width: 6),
           const AirPlayRoutePicker(size: 26),
           IconButton(
             tooltip: _baseVideo.value.isPlaying ? 'Pause' : 'Play',
@@ -533,8 +806,12 @@ class _LayersHomeState extends State<LayersHome> {
                                     value: _overlayOpacity,
                                     min: 0.0,
                                     max: 1.0,
-                                    onChanged: (v) =>
-                                        setState(() => _overlayOpacity = v),
+                                    onChanged: (v) {
+                                      setState(() => _overlayOpacity = v);
+                                      if (hostLink.isConnected) {
+                                        hostLink.sendOpacity(v);
+                                      }
+                                    },
                                   ),
                                 ),
                               ],

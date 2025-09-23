@@ -36,9 +36,6 @@ final class MTLMixedPlatformView: NSObject, FlutterPlatformView {
 
     override init() {
         super.init()
-
-        player?.allowsExternalPlayback = true
-        player?.usesExternalPlaybackWhileExternalScreenIsActive = true
         container.backgroundColor = .black
     }
 
@@ -97,7 +94,7 @@ final class MTLMixedPlatformView: NSObject, FlutterPlatformView {
                 if let v = (call.arguments as? [String: Any])?["value"] as? Double {
                     self.mixInstruction?.foregroundOpacity = CGFloat(max(0.0, min(1.0, v)))
                     if let item = self.player?.currentItem {
-                        item.videoComposition = self.videoComposition // odśwież
+                        item.videoComposition = self.videoComposition // refresh
                     }
                 }
                 result(nil)
@@ -112,7 +109,8 @@ final class MTLMixedPlatformView: NSObject, FlutterPlatformView {
 
         // Audio session
         do {
-            try AVAudioSession.sharedInstance().setCategory(.playback, options: [.mixWithOthers, .allowAirPlay])
+            try AVAudioSession.sharedInstance().setCategory(.playback,
+                options: [.mixWithOthers, .allowAirPlay])
             try AVAudioSession.sharedInstance().setActive(true)
         } catch { NSLog("AVAudioSession error: \(error.localizedDescription)") }
     }
@@ -168,7 +166,9 @@ final class MTLMixedPlatformView: NSObject, FlutterPlatformView {
             let aAsset = AVURLAsset(url: extra)
             if let aT = aAsset.tracks(withMediaType: .audio).first,
                let compA = comp.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) {
-                try compA.insertTimeRange(CMTimeRange(start: .zero, duration: min(dur, aAsset.duration)), of: aT, at: .zero)
+                try compA.insertTimeRange(CMTimeRange(start: .zero,
+                                                      duration: min(dur, aAsset.duration)),
+                                          of: aT, at: .zero)
                 let p = AVMutableAudioMixInputParameters(track: compA); p.setVolume(1.0, at: .zero)
                 params.append(p)
             }
@@ -184,7 +184,9 @@ final class MTLMixedPlatformView: NSObject, FlutterPlatformView {
         vcomp.frameDuration = CMTime(value: 1, timescale: timescale)
 
         let instr = MixInstruction(timeRange: CMTimeRange(start: .zero, duration: dur),
-                                   bg: compBG.trackID, fg: compFG.trackID, opacity: opacity)
+                                   bg: compBG.trackID,
+                                   fg: compFG.trackID,
+                                   opacity: opacity)
         vcomp.instructions = [instr]
 
         let item = AVPlayerItem(asset: comp)
@@ -192,7 +194,12 @@ final class MTLMixedPlatformView: NSObject, FlutterPlatformView {
         item.audioMix = audioMix
 
         let pl = AVPlayer(playerItem: item)
-        pl.automaticallyWaitsToMinimizeStalling = true
+
+        // ✅ External playback / AirPlay configuration
+        pl.allowsExternalPlayback = true
+        pl.usesExternalPlaybackWhileExternalScreenIsActive = true
+        pl.automaticallyWaitsToMinimizeStalling = false
+        pl.preventsDisplaySleepDuringVideoPlayback = true
 
         let layer = AVPlayerLayer(player: pl)
         layer.videoGravity = .resizeAspect
