@@ -65,8 +65,8 @@ final class MTLMixedPlatformView: NSObject, FlutterPlatformView {
                     result(FlutterError(code: "args", message: "baseUrl/overlayUrl required", details: nil))
                     return
                 }
-                let extra = (a["extraAudioUrl"] as? String).flatMap(URL.init(string:))
-                let opacity = (a["overlayOpacity"] as? Double).map(CGFloat.init) ?? 0.7
+                let extra: URL? = (a["extraAudioUrl"] as? String).flatMap { URL(string: $0) }
+                let opacity: CGFloat = (a["overlayOpacity"] as? Double).map { CGFloat($0) } ?? 0.7
                 do {
                     try self.load(baseURL: URL(string: base)!,
                                   overlayURL: URL(string: overlay)!,
@@ -177,7 +177,8 @@ final class MTLMixedPlatformView: NSObject, FlutterPlatformView {
         vcomp.customVideoCompositorClass = AlphaBlendCompositor.self
         vcomp.renderSize = bgTrack.naturalSize
         let fps = max(1.0, Double(bgTrack.nominalFrameRate == 0 ? 30 : bgTrack.nominalFrameRate))
-        vcomp.frameDuration = CMTime(value: 1, timescale: CMTimeScale(fps))
+        let timescale = Int32(max(1, Int(round(fps))))
+        vcomp.frameDuration = CMTime(value: 1, timescale: timescale)
 
         let instr = MixInstruction(timeRange: CMTimeRange(start: .zero, duration: dur),
                                    bg: compBG.trackID, fg: compFG.trackID, opacity: opacity)

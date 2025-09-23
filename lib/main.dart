@@ -8,7 +8,6 @@ import 'package:http/http.dart' as http;
 import 'airplay_route_picker.dart';
 // import 'mixed_player_view.dart'
 
-
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const LayersApp());
@@ -36,7 +35,7 @@ class LayersHome extends StatefulWidget {
 class _LayersHomeState extends State<LayersHome> {
   // --- MEDIA SOURCES ---
   static const baseUrl =
-      'https://admin.ambistream.com/media/videos/AI_Video_Showcase.mp4';
+      'https://ambistream.musictechlab.io/media/videos/AI_Video_Showcase.mp4';
   static const overlayUrl =
       'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4';
   static const extraAudioUrl =
@@ -110,7 +109,8 @@ class _LayersHomeState extends State<LayersHome> {
       await session.configure(
         AudioSessionConfiguration(
           avAudioSessionCategory: AVAudioSessionCategory.playback,
-          avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.mixWithOthers,
+          avAudioSessionCategoryOptions:
+              AVAudioSessionCategoryOptions.mixWithOthers,
           avAudioSessionMode: AVAudioSessionMode.defaultMode,
           androidAudioAttributes: const AndroidAudioAttributes(
             contentType: AndroidAudioContentType.music,
@@ -165,9 +165,12 @@ class _LayersHomeState extends State<LayersHome> {
       _wireErrorListeners();
 
       // Coarse resync extra audio to base
-      _resyncTimer = Timer.periodic(const Duration(milliseconds: 750), (_) async {
+      _resyncTimer = Timer.periodic(const Duration(milliseconds: 750), (
+        _,
+      ) async {
         if (!_useExtraAudio) return;
-        if (!_baseVideo.value.isInitialized || !_baseVideo.value.isPlaying) return;
+        if (!_baseVideo.value.isInitialized || !_baseVideo.value.isPlaying)
+          return;
         final vp = _baseVideo.value.position;
         final ap = _extraAudio.position;
         if ((vp - ap).inMilliseconds.abs() > 250) {
@@ -226,7 +229,8 @@ class _LayersHomeState extends State<LayersHome> {
     });
     _overlayVideo.addListener(() {
       final err = _overlayVideo.value.errorDescription;
-      if (err != null && mounted) setState(() => _error = 'Overlay error: $err');
+      if (err != null && mounted)
+        setState(() => _error = 'Overlay error: $err');
     });
   }
 
@@ -304,294 +308,319 @@ class _LayersHomeState extends State<LayersHome> {
 
     return Scaffold(
       appBar: AppBar(
-      title: const Text('Layered Playback (Flutter PoC)'),
-      actions: [
-        const AirPlayRoutePicker(size: 26),
-        IconButton(
-          tooltip: _baseVideo.value.isPlaying ? 'Pause' : 'Play',
-          onPressed: _togglePlayPause,
-          icon: Icon(_baseVideo.value.isPlaying ? Icons.pause : Icons.play_arrow),
-        ),
-      ],
-    ),
+        title: const Text('Layered Playback (Flutter PoC)'),
+        actions: [
+          const AirPlayRoutePicker(size: 26),
+          IconButton(
+            tooltip: _baseVideo.value.isPlaying ? 'Pause' : 'Play',
+            onPressed: _togglePlayPause,
+            icon: Icon(
+              _baseVideo.value.isPlaying ? Icons.pause : Icons.play_arrow,
+            ),
+          ),
+        ],
+      ),
       body: !_ready
           ? const Center(child: CircularProgressIndicator())
           : Column(
-            children: [
-              // 1) Video with exact height (no leftover space)
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final ar = _baseVideo.value.aspectRatio;         // width / height
-                  final maxWidth = constraints.maxWidth;
-                  final idealHeight = maxWidth / ar;                // keep aspect
-                  final maxHeight = constraints.maxHeight * 0.45;   // cap at ~45% of screen
-                  final videoHeight = idealHeight > maxHeight ? maxHeight : idealHeight;
+              children: [
+                // 1) Video with exact height (no leftover space)
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final ar = _baseVideo.value.aspectRatio; // width / height
+                    final maxWidth = constraints.maxWidth;
+                    final idealHeight = maxWidth / ar; // keep aspect
+                    final maxHeight =
+                        constraints.maxHeight * 0.45; // cap at ~45% of screen
+                    final videoHeight = idealHeight > maxHeight
+                        ? maxHeight
+                        : idealHeight;
 
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        height: videoHeight,
-                        width: double.infinity,
-                        child: Stack(
-                          children: [
-                            if (_showBase) Positioned.fill(child: VideoPlayer(_baseVideo)),
-                            if (_showOverlay)
-                              Positioned.fill(
-                                child: Opacity(
-                                  opacity: _overlayOpacity,
-                                  child: VideoPlayer(_overlayVideo),
-                                ),
-                              ),
-                            if (_showSubtitles && _currentSub.isNotEmpty)
-                              Positioned(
-                                left: 12,
-                                right: 12,
-                                bottom: 12, // closer to timeline now
-                                child: _SubtitleBubble(
-                                  text: _currentSub,
-                                  fontSize: _subtitleFont,
-                                ),
-                              ),
-                            if (_showImage)
-                              Positioned(
-                                right: 24,
-                                bottom: 24,
-                                width: 200,
-                                child: DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.white24),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Image.asset(
-                                    'assets/media/sample_image.jpg',
-                                    fit: BoxFit.contain,
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          height: videoHeight,
+                          width: double.infinity,
+                          child: Stack(
+                            children: [
+                              if (_showBase)
+                                Positioned.fill(child: VideoPlayer(_baseVideo)),
+                              if (_showOverlay)
+                                Positioned.fill(
+                                  child: Opacity(
+                                    opacity: _overlayOpacity,
+                                    child: VideoPlayer(_overlayVideo),
                                   ),
                                 ),
-                              ),
-                          ],
+                              if (_showSubtitles && _currentSub.isNotEmpty)
+                                Positioned(
+                                  left: 12,
+                                  right: 12,
+                                  bottom: 12, // closer to timeline now
+                                  child: _SubtitleBubble(
+                                    text: _currentSub,
+                                    fontSize: _subtitleFont,
+                                  ),
+                                ),
+                              if (_showImage)
+                                Positioned(
+                                  right: 24,
+                                  bottom: 24,
+                                  width: 200,
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: Colors.white24),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Image.asset(
+                                      'assets/media/sample_image.jpg',
+                                      fit: BoxFit.contain,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
-                      ),
 
-                      // 2) Timeline directly under the video (no gap)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                        child: ValueListenableBuilder<VideoPlayerValue>(
-                          valueListenable: _baseVideo,
-                          builder: (context, value, _) {
-                            final dur = value.duration;
-                            final valid = dur != null && dur > Duration.zero;
-                            final pos = value.position;
-                            final cur = _isScrubbing ? _scrubTarget : pos;
-                            final maxMs = valid ? dur!.inMilliseconds.toDouble() : 1.0;
-                            final curMs = cur.inMilliseconds.clamp(0, maxMs).toDouble();
+                        // 2) Timeline directly under the video (no gap)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                          child: ValueListenableBuilder<VideoPlayerValue>(
+                            valueListenable: _baseVideo,
+                            builder: (context, value, _) {
+                              final dur = value.duration;
+                              final valid = dur != null && dur > Duration.zero;
+                              final pos = value.position;
+                              final cur = _isScrubbing ? _scrubTarget : pos;
+                              final maxMs = valid
+                                  ? dur!.inMilliseconds.toDouble()
+                                  : 1.0;
+                              final curMs = cur.inMilliseconds
+                                  .clamp(0, maxMs)
+                                  .toDouble();
 
-                            return Column(
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(_fmt(Duration(milliseconds: curMs.round()))),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Slider(
-                                        value: curMs,
-                                        min: 0.0,
-                                        max: maxMs,
-                                        onChangeStart: (_) {
-                                          setState(() {
-                                            _isScrubbing = true;
-                                            _scrubTarget = pos;
-                                          });
-                                        },
-                                        onChanged: (v) {
-                                          setState(() {
-                                            _scrubTarget = Duration(milliseconds: v.round());
-                                          });
-                                        },
-                                        onChangeEnd: (v) async {
-                                          final to = Duration(milliseconds: v.round());
-                                          setState(() {
-                                            _isScrubbing = false;
-                                            _scrubTarget = to;
-                                          });
-                                          await _seekAll(to);
-                                        },
+                              return Column(
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        _fmt(
+                                          Duration(milliseconds: curMs.round()),
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(valid ? _fmt(dur!) : '--:--'),
-                                  ],
-                                ),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    IconButton(
-                                      tooltip: 'Back 10s',
-                                      onPressed: valid
-                                          ? () async {
-                                              final p = _baseVideo.value.position -
-                                                  const Duration(seconds: 10);
-                                              await _seekAll(
-                                                p < Duration.zero ? Duration.zero : p,
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Slider(
+                                          value: curMs,
+                                          min: 0.0,
+                                          max: maxMs,
+                                          onChangeStart: (_) {
+                                            setState(() {
+                                              _isScrubbing = true;
+                                              _scrubTarget = pos;
+                                            });
+                                          },
+                                          onChanged: (v) {
+                                            setState(() {
+                                              _scrubTarget = Duration(
+                                                milliseconds: v.round(),
                                               );
-                                            }
-                                          : null,
-                                      icon: const Icon(Icons.replay_10),
-                                    ),
-                                    IconButton(
-                                      tooltip: 'Forward 10s',
-                                      onPressed: valid
-                                          ? () async {
-                                              final d = _baseVideo.value.duration;
-                                              if (d == null) return;
-                                              final p = _baseVideo.value.position +
-                                                  const Duration(seconds: 10);
-                                              await _seekAll(p > d ? d : p);
-                                            }
-                                          : null,
-                                      icon: const Icon(Icons.forward_10),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            );
+                                            });
+                                          },
+                                          onChangeEnd: (v) async {
+                                            final to = Duration(
+                                              milliseconds: v.round(),
+                                            );
+                                            setState(() {
+                                              _isScrubbing = false;
+                                              _scrubTarget = to;
+                                            });
+                                            await _seekAll(to);
+                                          },
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Text(valid ? _fmt(dur!) : '--:--'),
+                                    ],
+                                  ),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      IconButton(
+                                        tooltip: 'Back 10s',
+                                        onPressed: valid
+                                            ? () async {
+                                                final p =
+                                                    _baseVideo.value.position -
+                                                    const Duration(seconds: 10);
+                                                await _seekAll(
+                                                  p < Duration.zero
+                                                      ? Duration.zero
+                                                      : p,
+                                                );
+                                              }
+                                            : null,
+                                        icon: const Icon(Icons.replay_10),
+                                      ),
+                                      IconButton(
+                                        tooltip: 'Forward 10s',
+                                        onPressed: valid
+                                            ? () async {
+                                                final d =
+                                                    _baseVideo.value.duration;
+                                                if (d == null) return;
+                                                final p =
+                                                    _baseVideo.value.position +
+                                                    const Duration(seconds: 10);
+                                                await _seekAll(p > d ? d : p);
+                                              }
+                                            : null,
+                                        icon: const Icon(Icons.forward_10),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 8),
+
+                // 3) Panels take the rest
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                    children: [
+                      _layerPanel(
+                        context,
+                        keyStr: 'base',
+                        icon: Icons.video_settings_outlined,
+                        title: 'Base Layer',
+                        enabled: _showBase,
+                        onToggle: (v) => setState(() => _showBase = v),
+                        child: _volumeRow(
+                          label: 'Base volume',
+                          value: _baseVolume,
+                          onChange: (v) async {
+                            setState(() => _baseVolume = v);
+                            await _baseVideo.setVolume(v);
                           },
                         ),
                       ),
-                    ],
-                  );
-                },
-              ),
-
-              const SizedBox(height: 8),
-
-              // 3) Panels take the rest
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                  children: [
-                    _layerPanel(
-                      context,
-                      keyStr: 'base',
-                      icon: Icons.video_settings_outlined,
-                      title: 'Base Layer',
-                      enabled: _showBase,
-                      onToggle: (v) => setState(() => _showBase = v),
-                      child: _volumeRow(
-                        label: 'Base volume',
-                        value: _baseVolume,
-                        onChange: (v) async {
-                          setState(() => _baseVolume = v);
-                          await _baseVideo.setVolume(v);
-                        },
-                      ),
-                    ),
-                    _layerPanel(
-                      context,
-                      keyStr: 'overlay',
-                      icon: Icons.layers,
-                      title: 'Overlay Layer',
-                      enabled: _showOverlay,
-                      onToggle: (v) => setState(() => _showOverlay = v),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              const Padding(
-                                padding: EdgeInsets.only(left: 16),
-                                child: Text('Opacity'),
-                              ),
-                              Expanded(
-                                child: Slider(
-                                  value: _overlayOpacity,
-                                  min: 0.0,
-                                  max: 1.0,
-                                  onChanged: (v) => setState(() => _overlayOpacity = v),
+                      _layerPanel(
+                        context,
+                        keyStr: 'overlay',
+                        icon: Icons.layers,
+                        title: 'Overlay Layer',
+                        enabled: _showOverlay,
+                        onToggle: (v) => setState(() => _showOverlay = v),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                const Padding(
+                                  padding: EdgeInsets.only(left: 16),
+                                  child: Text('Opacity'),
                                 ),
-                              ),
-                            ],
-                          ),
-                          _volumeRow(
-                            label: 'Overlay volume',
-                            value: _overlayVolume,
-                            onChange: (v) async {
-                              setState(() => _overlayVolume = v);
-                              await _overlayVideo.setVolume(v);
-                            },
-                          ),
-                        ],
+                                Expanded(
+                                  child: Slider(
+                                    value: _overlayOpacity,
+                                    min: 0.0,
+                                    max: 1.0,
+                                    onChanged: (v) =>
+                                        setState(() => _overlayOpacity = v),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            _volumeRow(
+                              label: 'Overlay volume',
+                              value: _overlayVolume,
+                              onChange: (v) async {
+                                setState(() => _overlayVolume = v);
+                                await _overlayVideo.setVolume(v);
+                              },
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    _layerPanel(
-                      context,
-                      keyStr: 'image',
-                      icon: Icons.image_outlined,
-                      title: 'Image Layer',
-                      enabled: _showImage,
-                      onToggle: (v) => setState(() => _showImage = v),
-                      child: const Padding(
-                        padding: EdgeInsets.only(left: 16, right: 16, top: 4),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'Currently pinned bottom-right (200px).',
-                            style: TextStyle(color: Colors.white70),
+                      _layerPanel(
+                        context,
+                        keyStr: 'image',
+                        icon: Icons.image_outlined,
+                        title: 'Image Layer',
+                        enabled: _showImage,
+                        onToggle: (v) => setState(() => _showImage = v),
+                        child: const Padding(
+                          padding: EdgeInsets.only(left: 16, right: 16, top: 4),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Currently pinned bottom-right (200px).',
+                              style: TextStyle(color: Colors.white70),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    _layerPanel(
-                      context,
-                      keyStr: 'audio',
-                      icon: Icons.graphic_eq,
-                      title: 'Extra Audio Layer',
-                      enabled: _useExtraAudio,
-                      onToggle: (v) => _toggleExtraAudio(v),
-                      child: _volumeRow(
-                        label: 'Extra audio volume',
-                        value: _extraAudioVolume,
-                        onChange: (v) async {
-                          setState(() => _extraAudioVolume = v);
-                          await _extraAudio.setVolume(v);
-                        },
+                      _layerPanel(
+                        context,
+                        keyStr: 'audio',
+                        icon: Icons.graphic_eq,
+                        title: 'Extra Audio Layer',
+                        enabled: _useExtraAudio,
+                        onToggle: (v) => _toggleExtraAudio(v),
+                        child: _volumeRow(
+                          label: 'Extra audio volume',
+                          value: _extraAudioVolume,
+                          onChange: (v) async {
+                            setState(() => _extraAudioVolume = v);
+                            await _extraAudio.setVolume(v);
+                          },
+                        ),
                       ),
-                    ),
-                    _layerPanel(
-                      context,
-                      keyStr: 'subs',
-                      icon: Icons.subtitles,
-                      title: 'Subtitles Layer',
-                      enabled: _showSubtitles,
-                      onToggle: (v) => setState(() {
-                        _showSubtitles = v;
-                        if (v) {
-                          _startSubtitleTicker();
-                        } else {
-                          _currentSub = '';
-                        }
-                      }),
-                      child: Row(
-                        children: [
-                          const Padding(
-                            padding: EdgeInsets.only(left: 16),
-                            child: Text('Font size'),
-                          ),
-                          Expanded(
-                            child: Slider(
-                              value: _subtitleFont,
-                              min: 14,
-                              max: 36,
-                              onChanged: (v) => setState(() => _subtitleFont = v),
+                      _layerPanel(
+                        context,
+                        keyStr: 'subs',
+                        icon: Icons.subtitles,
+                        title: 'Subtitles Layer',
+                        enabled: _showSubtitles,
+                        onToggle: (v) => setState(() {
+                          _showSubtitles = v;
+                          if (v) {
+                            _startSubtitleTicker();
+                          } else {
+                            _currentSub = '';
+                          }
+                        }),
+                        child: Row(
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.only(left: 16),
+                              child: Text('Font size'),
                             ),
-                          ),
-                        ],
+                            Expanded(
+                              child: Slider(
+                                value: _subtitleFont,
+                                min: 14,
+                                max: 36,
+                                onChanged: (v) =>
+                                    setState(() => _subtitleFont = v),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          )
+              ],
+            ),
     );
   }
 
@@ -625,7 +654,10 @@ class _LayersHomeState extends State<LayersHome> {
                   Expanded(
                     child: Text(
                       title,
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                   Switch(value: enabled, onChanged: onToggle),
@@ -645,8 +677,9 @@ class _LayersHomeState extends State<LayersHome> {
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
               child: child,
             ),
-            crossFadeState:
-                isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            crossFadeState: isExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
             duration: const Duration(milliseconds: 200),
           ),
         ],
@@ -661,10 +694,7 @@ class _LayersHomeState extends State<LayersHome> {
   }) {
     return Row(
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 16),
-          child: Text(label),
-        ),
+        Padding(padding: const EdgeInsets.only(left: 16), child: Text(label)),
         Expanded(
           child: Slider(
             value: value,
@@ -692,7 +722,10 @@ List<_SrtCue> _parseSrt(String raw) {
   final cues = <_SrtCue>[];
   int i = 0;
   while (i < lines.length) {
-    if (lines[i].trim().isEmpty) { i++; continue; }
+    if (lines[i].trim().isEmpty) {
+      i++;
+      continue;
+    }
     if (RegExp(r'^\d+$').hasMatch(lines[i].trim())) i++; // optional index
     if (i >= lines.length) break;
 
