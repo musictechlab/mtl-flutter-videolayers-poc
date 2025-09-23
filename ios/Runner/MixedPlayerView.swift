@@ -36,6 +36,9 @@ final class MTLMixedPlatformView: NSObject, FlutterPlatformView {
 
     override init() {
         super.init()
+
+        player?.allowsExternalPlayback = true
+        player?.usesExternalPlaybackWhileExternalScreenIsActive = true
         container.backgroundColor = .black
     }
 

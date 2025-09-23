@@ -301,14 +301,14 @@ class _LayersHomeState extends State<LayersHome> {
   Widget build(BuildContext context) {
     if (_error != null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Layered Playback (Flutter PoC)')),
+        appBar: AppBar(title: const Text('Layered Playback')),
         body: Center(child: Text(_error!, textAlign: TextAlign.center)),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Layered Playback (Flutter PoC)'),
+        title: const Text('Layered Playback'),
         actions: [
           const AirPlayRoutePicker(size: 26),
           IconButton(
