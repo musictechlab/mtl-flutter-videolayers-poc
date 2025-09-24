@@ -143,6 +143,10 @@ class HostLink {
       // ignore malformed
     }
   }
+
+  String getLink() {
+    return 'ws://$host:$port?token=$token';
+  }
 }
 
 /// Global instance if you want singleton semantics

@@ -379,6 +379,10 @@ class _LayersHomeState extends State<LayersHome> {
       }
       try {
         await _cast.start();
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Cast started')));
       } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(
@@ -690,7 +694,7 @@ class _LayersHomeState extends State<LayersHome> {
                             child: Text(
                               hostLink.isConnected
                                   ? (_cast.isActive
-                                        ? 'Casting to host…'
+                                        ? 'Casting to host ${_cast.hostLink.getLink()}…'
                                         : 'Tap the switch to start casting the mixed video to the host.')
                                   : 'Connect to a host first, then enable casting.',
                               style: const TextStyle(color: Colors.white70),
