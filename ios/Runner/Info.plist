@@ -6,6 +6,8 @@
 	<string>group.com.example.mtlfluttervideolayerspoc</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>RPBroadcastExtension</key>
+	<string>com.example.mtlfluttervideolayerspoc.AmbistreamBroadcast</string>
 	<key>CFBundleDisplayName</key>
 	<string>mtl_flutter_videolayers_poc</string>
 	<key>CFBundleExecutable</key>
@@ -51,5 +53,9 @@
 	<string>This app needs camera access to scan QR codes to connect with Ambistream Host.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Audio capture for screen streaming.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+	<key>NSAllowsArbitraryLoadsInLocalNetworking</key><true/>
+	</dict>
 </dict>
 </plist>
