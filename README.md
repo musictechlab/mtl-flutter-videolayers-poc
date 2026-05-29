@@ -1,5 +1,7 @@
 # mtl_flutter_videolayers_poc
 
+[![Built by MusicTech Lab](https://musictechlab.io/oss/build-by-musictechlab.io.svg)](https://musictechlab.io)
+
 ## Project Description
 
 mtl_flutter_videolayers_poc is a Flutter project designed to demonstrate video and audio playback capabilities using various media formats. It includes sample media files and subtitles to showcase the functionality.
